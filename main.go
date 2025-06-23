@@ -5,13 +5,20 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math"
 	"math/rand"
 	"os"
 )
 
-func main() {
+var (
+	// FlagOriginal the original model
+	FlagOriginal = flag.Bool("original", false, "the original model")
+)
+
+// Original the original model
+func Original() {
 	rng := rand.New(rand.NewSource(1))
 	// potential energy function
 	V := func(x float64) float64 {
@@ -152,4 +159,13 @@ func main() {
 	}
 	fmt.Println(" <E> from P(x) = ", E_ave)
 	fmt.Println(" Probability histogram written to file pimc.out")
+}
+
+func main() {
+	flag.Parse()
+
+	if *FlagOriginal {
+		Original()
+		return
+	}
 }
