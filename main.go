@@ -298,7 +298,7 @@ func main() {
 			E_sqd_sum += E * E
 		}
 	}
-
+	fmt.Println(" Percentage of accepted steps = ", float64(acceptances)/float64(MC_steps*M)*100.0)
 	// compute averages
 	values := MC_steps * M
 	E_ave := E_sum / float64(values)
