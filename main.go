@@ -322,36 +322,16 @@ func main() {
 				s := config[a][b]
 				//nb := config[(a+1)%N][b] + config[a][(b+1)%N] + config[(a-1+N)%N][b] + config[a][(b-1+N)%N]
 				negative, positive, total := 0.0, 0.0, 0.0
-				if config[(a+1)%N][b] == -1 {
-					negative++
-				} else {
-					positive++
+				for ii := -1; ii < 2; ii++ {
+					for iii := -1; iii < 2; iii++ {
+						if config[(a+ii+N)%N][(b+iii+N)%N] == -1 {
+							negative++
+						} else {
+							positive++
+						}
+						total++
+					}
 				}
-				total++
-				if config[a][(b+1)%N] == -1 {
-					negative++
-				} else {
-					positive++
-				}
-				total++
-				if config[(a-1+N)%N][b] == -1 {
-					negative++
-				} else {
-					positive++
-				}
-				total++
-				if config[a][(b-1+N)%N] == -1 {
-					negative++
-				} else {
-					positive++
-				}
-				total++
-				if config[a][b] == -1 {
-					negative++
-				} else {
-					positive++
-				}
-				total++
 				aa := 0.0
 				if positive > 0 {
 					aa = (positive / total) * math.Log2(positive/total)
@@ -360,7 +340,7 @@ func main() {
 				if negative > 0 {
 					bb = (negative / total) * math.Log2(negative/total)
 				}
-				cost := 2 * -(aa + bb) //* s * nb
+				cost := 2 * s * -(aa + bb) //* s * nb
 				if cost < 0 {
 					s *= -1
 				} else if rng.Float64() < math.Exp(-cost*beta) {
