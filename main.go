@@ -294,4 +294,159 @@ func main() {
 		Ising()
 		return
 	}
+
+	rng := rand.New(rand.NewSource(1))
+
+	//----------------------------------------------------------------------
+	//  BLOCK OF FUNCTIONS USED IN THE MAIN CODE
+	//----------------------------------------------------------------------
+	initialstate := func(N int) [][]float64 {
+		// generates a random spin configuration for initial condition
+		state := make([][]float64, N)
+		for i := range state {
+			state[i] = make([]float64, N)
+			for ii := range state[i] {
+				state[i][ii] = float64(2*rng.Intn(2) - 1)
+			}
+		}
+		return state
+	}
+
+	mcmove := func(config [][]float64, beta float64) [][]float64 {
+		// Monte Carlo move using Metropolis algorithm
+		N := len(config)
+		for i := range config {
+			for range config[i] {
+				a := rng.Intn(N)
+				b := rng.Intn(N)
+				s := config[a][b]
+				//nb := config[(a+1)%N][b] + config[a][(b+1)%N] + config[(a-1+N)%N][b] + config[a][(b-1+N)%N]
+				negative, positive, total := 0.0, 0.0, 0.0
+				if config[(a+1)%N][b] == -1 {
+					negative++
+				} else {
+					positive++
+				}
+				total++
+				if config[a][(b+1)%N] == -1 {
+					negative++
+				} else {
+					positive++
+				}
+				total++
+				if config[(a-1+N)%N][b] == -1 {
+					negative++
+				} else {
+					positive++
+				}
+				total++
+				if config[a][(b-1+N)%N] == -1 {
+					negative++
+				} else {
+					positive++
+				}
+				total++
+				if config[a][b] == -1 {
+					negative++
+				} else {
+					positive++
+				}
+				total++
+				aa := 0.0
+				if positive > 0 {
+					aa = (positive / total) * math.Log2(positive/total)
+				}
+				bb := 0.0
+				if negative > 0 {
+					bb = (negative / total) * math.Log2(negative/total)
+				}
+				cost := 2 * -(aa + bb) //* s * nb
+				if cost < 0 {
+					s *= -1
+				} else if rng.Float64() < math.Exp(-cost*beta) {
+					s *= -1
+				}
+				config[a][b] = s
+			}
+		}
+		return config
+	}
+
+	calcEnergy := func(config [][]float64) float64 {
+		// Energy of a given configuration
+		N := len(config)
+		energy := 0.0
+		for i := range config {
+			for j := range config[i] {
+				S := config[i][j]
+				nb := config[(i+1)%N][j] + config[i][(j+1)%N] + config[(i-1+N)%N][j] + config[i][(j-1+N)%N]
+				energy += -nb * S
+			}
+		}
+		return energy / 4.
+	}
+
+	calcMag := func(config [][]float64) float64 {
+		// Magnetization of a given configuration
+		mag := 0.0
+		for i := range config {
+			for _, value := range config[i] {
+				mag += value
+			}
+		}
+		return mag
+	}
+
+	// change these parameters for a smaller (faster) simulation
+	nt := 88        //  number of temperature points
+	N := 16         //  size of the lattice, N x N
+	eqSteps := 1024 //  number of MC sweeps for equilibration
+	mcSteps := 1024 //  number of MC sweeps for calculation
+
+	T := make([]float64, nt)
+	start := 1.53
+	stop := 3.28
+	dx := (stop - start) / float64(nt)
+	for i := range T {
+		T[i] = start + float64(i)*dx
+	}
+	E, M, C, X := make([]float64, nt), make([]float64, nt), make([]float64, nt), make([]float64, nt)
+	n1, n2 := 1.0/float64(mcSteps*N*N), 1.0/float64(mcSteps*mcSteps*N*N)
+	// divide by number of samples, and by system size to get intensive values
+
+	//----------------------------------------------------------------------
+	//  MAIN PART OF THE CODE
+	//----------------------------------------------------------------------
+	for tt := range nt {
+		E1 := 0.0
+		M1 := 0.0
+		E2 := 0.0
+		M2 := 0.0
+		config := initialstate(N)
+		iT := 1.0 / T[tt]
+		iT2 := iT * iT
+
+		for range eqSteps { // equilibrate
+			mcmove(config, iT) // Monte Carlo moves
+		}
+
+		for range mcSteps {
+			mcmove(config, iT)
+			Ene := calcEnergy(config) // calculate the energy
+			Mag := calcMag(config)    // calculate the magnetisation
+
+			E1 = E1 + Ene
+			M1 = M1 + Mag
+			M2 = M2 + Mag*Mag
+			E2 = E2 + Ene*Ene
+		}
+
+		E[tt] = n1 * E1
+		M[tt] = n1 * M1
+		C[tt] = (n1*E2 - n2*E1*E1) * iT2
+		X[tt] = (n1*M2 - n2*M1*M1) * iT
+	}
+
+	fmt.Println(E)
+	fmt.Println(M)
 }
