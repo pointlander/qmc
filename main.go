@@ -15,6 +15,8 @@ import (
 var (
 	// FlagOriginal the original model
 	FlagOriginal = flag.Bool("original", false, "the original model")
+	// FlagIsing the ising model
+	FlagIsing = flag.Bool("ising", false, "the ising model")
 )
 
 // Original the original model
@@ -161,14 +163,8 @@ func Original() {
 	fmt.Println(" Probability histogram written to file pimc.out")
 }
 
-func main() {
-	flag.Parse()
-
-	if *FlagOriginal {
-		Original()
-		return
-	}
-
+// Ising is the ising model
+func Ising() {
 	rng := rand.New(rand.NewSource(1))
 
 	//----------------------------------------------------------------------
@@ -284,4 +280,18 @@ func main() {
 
 	fmt.Println(E)
 	fmt.Println(M)
+}
+
+func main() {
+	flag.Parse()
+
+	if *FlagOriginal {
+		Original()
+		return
+	}
+
+	if *FlagIsing {
+		Ising()
+		return
+	}
 }
