@@ -324,6 +324,9 @@ func main() {
 				negative, positive, total := 0.0, 0.0, 0.0
 				for ii := -1; ii < 2; ii++ {
 					for iii := -1; iii < 2; iii++ {
+						if ii == 0 && iii == 0 {
+							continue
+						}
 						if config[(a+ii+N)%N][(b+iii+N)%N] == -1 {
 							negative++
 						} else {
