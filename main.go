@@ -282,6 +282,90 @@ func Ising() {
 	fmt.Println(M)
 }
 
+// Electron is an electron with spin
+type Electron struct {
+	Spin  float64
+	Links []*Electron
+}
+
+// System is a system of electrons
+type System struct {
+	Rng       *rand.Rand
+	Electrons []*Electron
+}
+
+// NewSystem creates a new system of electrons
+func NewSystem(n int64) System {
+	return System{
+		Rng:       rand.New(rand.NewSource(n)),
+		Electrons: make([]*Electron, n),
+	}
+}
+
+// Link adds a link between to electrons
+func (s *System) Link(a, b int) {
+	s.Electrons[a].Links = append(s.Electrons[a].Links, s.Electrons[b])
+}
+
+// Step steps the mode
+func (s *System) Step(beta float64) {
+	// Monte Carlo move using Metropolis algorithm
+	N := len(s.Electrons)
+	for range s.Electrons {
+		a := s.Rng.Intn(N)
+		e := s.Electrons[a]
+		//nb := config[(a+1)%N][b] + config[a][(b+1)%N] + config[(a-1+N)%N][b] + config[a][(b-1+N)%N]
+		negative, positive, total := 0.0, 0.0, 0.0
+		for _, e := range e.Links {
+			if e.Spin == -1 {
+				negative++
+			} else {
+				positive++
+			}
+			total++
+		}
+		aa := 0.0
+		if positive > 0 {
+			aa = (positive / total) * math.Log2(positive/total)
+		}
+		bb := 0.0
+		if negative > 0 {
+			bb = (negative / total) * math.Log2(negative/total)
+		}
+		cost := 2 * e.Spin * -(aa + bb) //* s * nb
+		if cost < 0 {
+			e.Spin *= -1
+		} else if s.Rng.Float64() < math.Exp(-cost*beta) {
+			e.Spin *= -1
+		}
+	}
+}
+
+// CalcEnergy calculates the energy
+func (s *System) CalcEnergy() float64 {
+	// Energy of a given configuration
+	energy := 0.0
+	for _, e := range s.Electrons {
+		S := e.Spin
+		nb := 0.0
+		for _, e := range e.Links {
+			nb += e.Spin
+		}
+		energy += -nb * S
+	}
+	return energy / 4.0
+}
+
+// CalcMag calculates the magnetization
+func (s *System) CalcMag() float64 {
+	// Magnetization of a given configuration
+	mag := 0.0
+	for i := range s.Electrons {
+		mag += s.Electrons[i].Spin
+	}
+	return mag
+}
+
 func main() {
 	flag.Parse()
 
@@ -417,6 +501,54 @@ func main() {
 			mcmove(config, iT)
 			Ene := calcEnergy(config) // calculate the energy
 			Mag := calcMag(config)    // calculate the magnetisation
+
+			E1 = E1 + Ene
+			M1 = M1 + Mag
+			M2 = M2 + Mag*Mag
+			E2 = E2 + Ene*Ene
+		}
+
+		E[tt] = n1 * E1
+		M[tt] = n1 * M1
+		C[tt] = (n1*E2 - n2*E1*E1) * iT2
+		X[tt] = (n1*M2 - n2*M1*M1) * iT
+	}
+
+	fmt.Println(E)
+	fmt.Println(M)
+
+	for tt := range nt {
+		E1 := 0.0
+		M1 := 0.0
+		E2 := 0.0
+		M2 := 0.0
+		config := NewSystem(4)
+		for i := range config.Electrons {
+			e := Electron{
+				Spin: float64(2*rng.Intn(2) - 1),
+			}
+			config.Electrons[i] = &e
+		}
+		config.Link(0, 1)
+		config.Link(0, 3)
+		config.Link(1, 0)
+		config.Link(1, 2)
+		config.Link(2, 1)
+		config.Link(2, 3)
+		config.Link(3, 0)
+		config.Link(3, 2)
+
+		iT := 1.0 / T[tt]
+		iT2 := iT * iT
+
+		for range eqSteps { // equilibrate
+			config.Step(iT) // Monte Carlo moves
+		}
+
+		for range mcSteps {
+			config.Step(iT)
+			Ene := config.CalcEnergy() // calculate the energy
+			Mag := config.CalcMag()    // calculate the magnetisation
 
 			E1 = E1 + Ene
 			M1 = M1 + Mag
