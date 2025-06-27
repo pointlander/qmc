@@ -411,7 +411,7 @@ func Model(c Cost) {
 	n1, n2 := 1.0/float64(mcSteps*N*N), 1.0/float64(mcSteps*mcSteps*N*N)
 	// divide by number of samples, and by system size to get intensive values
 
-	histogram := [2]float64{}
+	histogram := [5][2]float64{}
 	for tt := range nt {
 		E1 := 0.0
 		M1 := 0.0
@@ -442,7 +442,9 @@ func Model(c Cost) {
 			config.Step(iT, c)
 			Ene := config.CalcEnergy() // calculate the energy
 			Mag := config.CalcMag()    // calculate the magnetisation
-			histogram[S(config.Electrons[4].Spin)]++
+			for i, e := range config.Electrons {
+				histogram[i][S(e.Spin)]++
+			}
 			E1 = E1 + Ene
 			M1 = M1 + Mag
 			M2 = M2 + Mag*Mag
@@ -457,7 +459,9 @@ func Model(c Cost) {
 
 	fmt.Println(E)
 	fmt.Println(M)
-	fmt.Println(histogram)
+	for _, h := range histogram {
+		fmt.Println(h)
+	}
 }
 
 func main() {
