@@ -282,6 +282,14 @@ func Ising() {
 	fmt.Println(M)
 }
 
+// S translates -1 to 0 and 1 to 1
+func S(a float64) uint {
+	if a == -1.0 {
+		return 0
+	}
+	return 1
+}
+
 // Electron is an electron with spin
 type Electron struct {
 	Spin  float64
@@ -315,24 +323,22 @@ func (s *System) Step(beta float64) {
 		a := s.Rng.Intn(N)
 		e := s.Electrons[a]
 		//nb := config[(a+1)%N][b] + config[a][(b+1)%N] + config[(a-1+N)%N][b] + config[a][(b-1+N)%N]
-		negative, positive, total := 0.0, 0.0, 0.0
+		histogram := [2]float64{}
 		for _, e := range e.Links {
-			if e.Spin == -1 {
-				negative++
-			} else {
-				positive++
+			histogram[S(e.Spin)]++
+		}
+		sum := 0.0
+		for _, value := range histogram {
+			sum += value
+		}
+		entropy := 0.0
+		for _, value := range histogram {
+			if value == 0 {
+				continue
 			}
-			total++
+			entropy += (value / sum) * math.Log2(value/sum)
 		}
-		aa := 0.0
-		if positive > 0 {
-			aa = (positive / total) * math.Log2(positive/total)
-		}
-		bb := 0.0
-		if negative > 0 {
-			bb = (negative / total) * math.Log2(negative/total)
-		}
-		cost := 2 * e.Spin * -(aa + bb) //* s * nb
+		cost := 2 * e.Spin * -entropy //* s * nb
 		if cost < 0 {
 			e.Spin *= -1
 		} else if s.Rng.Float64() < math.Exp(-cost*beta) {
@@ -554,11 +560,7 @@ func main() {
 			config.Step(iT)
 			Ene := config.CalcEnergy() // calculate the energy
 			Mag := config.CalcMag()    // calculate the magnetisation
-			if config.Electrons[4].Spin == -1 {
-				histogram[0]++
-			} else {
-				histogram[1]++
-			}
+			histogram[S(config.Electrons[4].Spin)]++
 			E1 = E1 + Ene
 			M1 = M1 + Mag
 			M2 = M2 + Mag*Mag
