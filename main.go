@@ -316,29 +316,17 @@ func (s *System) Link(a, b int) {
 }
 
 // Step steps the mode
-func (s *System) Step(beta float64) {
+func (s *System) Step(beta float64, c Cost) {
 	// Monte Carlo move using Metropolis algorithm
 	N := len(s.Electrons)
 	for range s.Electrons {
 		a := s.Rng.Intn(N)
 		e := s.Electrons[a]
-		//nb := config[(a+1)%N][b] + config[a][(b+1)%N] + config[(a-1+N)%N][b] + config[a][(b-1+N)%N]
 		histogram := [2]float64{}
 		for _, e := range e.Links {
 			histogram[S(e.Spin)]++
 		}
-		sum := 0.0
-		for _, value := range histogram {
-			sum += value
-		}
-		entropy := 0.0
-		for _, value := range histogram {
-			if value == 0 {
-				continue
-			}
-			entropy += (value / sum) * math.Log2(value/sum)
-		}
-		cost := 2 * e.Spin * -entropy //* s * nb
+		cost := 2 * e.Spin * c(histogram)
 		if cost < 0 {
 			e.Spin *= -1
 		} else if s.Rng.Float64() < math.Exp(-cost*beta) {
@@ -372,103 +360,33 @@ func (s *System) CalcMag() float64 {
 	return mag
 }
 
-func main() {
-	flag.Parse()
+// Cost the cost
+type Cost func(histogram [2]float64) float64
 
-	if *FlagOriginal {
-		Original()
-		return
+// Entropy use entropy for cost
+func Entropy(histogram [2]float64) float64 {
+	sum := 0.0
+	for _, value := range histogram {
+		sum += value
 	}
-
-	if *FlagIsing {
-		Ising()
-		return
+	entropy := 0.0
+	for _, value := range histogram {
+		if value == 0 {
+			continue
+		}
+		entropy += (value / sum) * math.Log2(value/sum)
 	}
+	return -entropy
+}
 
+// Spin use spin for cost
+func Spin(histogram [2]float64) float64 {
+	return histogram[1] - histogram[0]
+}
+
+// Model is the model
+func Model(c Cost) {
 	rng := rand.New(rand.NewSource(1))
-
-	//----------------------------------------------------------------------
-	//  BLOCK OF FUNCTIONS USED IN THE MAIN CODE
-	//----------------------------------------------------------------------
-	initialstate := func(N int) [][]float64 {
-		// generates a random spin configuration for initial condition
-		state := make([][]float64, N)
-		for i := range state {
-			state[i] = make([]float64, N)
-			for ii := range state[i] {
-				state[i][ii] = float64(2*rng.Intn(2) - 1)
-			}
-		}
-		return state
-	}
-
-	mcmove := func(config [][]float64, beta float64) [][]float64 {
-		// Monte Carlo move using Metropolis algorithm
-		N := len(config)
-		for i := range config {
-			for range config[i] {
-				a := rng.Intn(N)
-				b := rng.Intn(N)
-				s := config[a][b]
-				//nb := config[(a+1)%N][b] + config[a][(b+1)%N] + config[(a-1+N)%N][b] + config[a][(b-1+N)%N]
-				negative, positive, total := 0.0, 0.0, 0.0
-				for ii := -1; ii < 2; ii++ {
-					for iii := -1; iii < 2; iii++ {
-						if ii == 0 && iii == 0 {
-							continue
-						}
-						if config[(a+ii+N)%N][(b+iii+N)%N] == -1 {
-							negative++
-						} else {
-							positive++
-						}
-						total++
-					}
-				}
-				aa := 0.0
-				if positive > 0 {
-					aa = (positive / total) * math.Log2(positive/total)
-				}
-				bb := 0.0
-				if negative > 0 {
-					bb = (negative / total) * math.Log2(negative/total)
-				}
-				cost := 2 * s * -(aa + bb) //* s * nb
-				if cost < 0 {
-					s *= -1
-				} else if rng.Float64() < math.Exp(-cost*beta) {
-					s *= -1
-				}
-				config[a][b] = s
-			}
-		}
-		return config
-	}
-
-	calcEnergy := func(config [][]float64) float64 {
-		// Energy of a given configuration
-		N := len(config)
-		energy := 0.0
-		for i := range config {
-			for j := range config[i] {
-				S := config[i][j]
-				nb := config[(i+1)%N][j] + config[i][(j+1)%N] + config[(i-1+N)%N][j] + config[i][(j-1+N)%N]
-				energy += -nb * S
-			}
-		}
-		return energy / 4.
-	}
-
-	calcMag := func(config [][]float64) float64 {
-		// Magnetization of a given configuration
-		mag := 0.0
-		for i := range config {
-			for _, value := range config[i] {
-				mag += value
-			}
-		}
-		return mag
-	}
 
 	// change these parameters for a smaller (faster) simulation
 	nt := 88        //  number of temperature points
@@ -486,42 +404,6 @@ func main() {
 	E, M, C, X := make([]float64, nt), make([]float64, nt), make([]float64, nt), make([]float64, nt)
 	n1, n2 := 1.0/float64(mcSteps*N*N), 1.0/float64(mcSteps*mcSteps*N*N)
 	// divide by number of samples, and by system size to get intensive values
-
-	//----------------------------------------------------------------------
-	//  MAIN PART OF THE CODE
-	//----------------------------------------------------------------------
-	for tt := range nt {
-		E1 := 0.0
-		M1 := 0.0
-		E2 := 0.0
-		M2 := 0.0
-		config := initialstate(N)
-		iT := 1.0 / T[tt]
-		iT2 := iT * iT
-
-		for range eqSteps { // equilibrate
-			mcmove(config, iT) // Monte Carlo moves
-		}
-
-		for range mcSteps {
-			mcmove(config, iT)
-			Ene := calcEnergy(config) // calculate the energy
-			Mag := calcMag(config)    // calculate the magnetisation
-
-			E1 = E1 + Ene
-			M1 = M1 + Mag
-			M2 = M2 + Mag*Mag
-			E2 = E2 + Ene*Ene
-		}
-
-		E[tt] = n1 * E1
-		M[tt] = n1 * M1
-		C[tt] = (n1*E2 - n2*E1*E1) * iT2
-		X[tt] = (n1*M2 - n2*M1*M1) * iT
-	}
-
-	fmt.Println(E)
-	fmt.Println(M)
 
 	histogram := [2]float64{}
 	for tt := range nt {
@@ -553,11 +435,11 @@ func main() {
 		iT2 := iT * iT
 
 		for range eqSteps { // equilibrate
-			config.Step(iT) // Monte Carlo moves
+			config.Step(iT, c) // Monte Carlo moves
 		}
 
 		for range mcSteps {
-			config.Step(iT)
+			config.Step(iT, c)
 			Ene := config.CalcEnergy() // calculate the energy
 			Mag := config.CalcMag()    // calculate the magnetisation
 			histogram[S(config.Electrons[4].Spin)]++
@@ -576,4 +458,23 @@ func main() {
 	fmt.Println(E)
 	fmt.Println(M)
 	fmt.Println(histogram)
+}
+
+func main() {
+	flag.Parse()
+
+	if *FlagOriginal {
+		Original()
+		return
+	}
+
+	if *FlagIsing {
+		Ising()
+		return
+	}
+
+	fmt.Println("Spin")
+	Model(Spin)
+	fmt.Println("Entropy")
+	Model(Entropy)
 }
