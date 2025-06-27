@@ -517,12 +517,13 @@ func main() {
 	fmt.Println(E)
 	fmt.Println(M)
 
+	histogram := [2]float64{}
 	for tt := range nt {
 		E1 := 0.0
 		M1 := 0.0
 		E2 := 0.0
 		M2 := 0.0
-		config := NewSystem(4)
+		config := NewSystem(5)
 		for i := range config.Electrons {
 			e := Electron{
 				Spin: float64(2*rng.Intn(2) - 1),
@@ -535,8 +536,12 @@ func main() {
 		config.Link(1, 2)
 		config.Link(2, 1)
 		config.Link(2, 3)
+		config.Link(2, 4)
 		config.Link(3, 0)
 		config.Link(3, 2)
+		config.Link(3, 4)
+		config.Link(4, 2)
+		config.Link(4, 3)
 
 		iT := 1.0 / T[tt]
 		iT2 := iT * iT
@@ -549,7 +554,11 @@ func main() {
 			config.Step(iT)
 			Ene := config.CalcEnergy() // calculate the energy
 			Mag := config.CalcMag()    // calculate the magnetisation
-
+			if config.Electrons[4].Spin == -1 {
+				histogram[0]++
+			} else {
+				histogram[1]++
+			}
 			E1 = E1 + Ene
 			M1 = M1 + Mag
 			M2 = M2 + Mag*Mag
@@ -564,4 +573,5 @@ func main() {
 
 	fmt.Println(E)
 	fmt.Println(M)
+	fmt.Println(histogram)
 }
