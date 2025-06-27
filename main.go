@@ -303,10 +303,18 @@ type System struct {
 }
 
 // NewSystem creates a new system of electrons
-func NewSystem(n int64) System {
+func NewSystem(seed int64, n int) System {
+	rng := rand.New(rand.NewSource(seed))
+	electrons := make([]*Electron, n)
+	for i := range electrons {
+		e := Electron{
+			Spin: float64(2*rng.Intn(2) - 1),
+		}
+		electrons[i] = &e
+	}
 	return System{
-		Rng:       rand.New(rand.NewSource(n)),
-		Electrons: make([]*Electron, n),
+		Rng:       rng,
+		Electrons: electrons,
 	}
 }
 
@@ -386,8 +394,6 @@ func Spin(histogram [2]float64) float64 {
 
 // Model is the model
 func Model(c Cost) {
-	rng := rand.New(rand.NewSource(1))
-
 	// change these parameters for a smaller (faster) simulation
 	nt := 88        //  number of temperature points
 	N := 16         //  size of the lattice, N x N
@@ -411,13 +417,7 @@ func Model(c Cost) {
 		M1 := 0.0
 		E2 := 0.0
 		M2 := 0.0
-		config := NewSystem(5)
-		for i := range config.Electrons {
-			e := Electron{
-				Spin: float64(2*rng.Intn(2) - 1),
-			}
-			config.Electrons[i] = &e
-		}
+		config := NewSystem(1, 5)
 		config.Link(0, 1)
 		config.Link(0, 3)
 		config.Link(1, 0)
