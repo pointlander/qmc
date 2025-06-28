@@ -294,6 +294,7 @@ func S(a float64) uint {
 type Electron struct {
 	Spin  float64
 	Links []*Electron
+	Flips int
 }
 
 // System is a system of electrons
@@ -337,8 +338,10 @@ func (s *System) Step(beta float64, c Cost) {
 		cost := 2 * e.Spin * c(histogram)
 		if cost < 0 {
 			e.Spin *= -1
+			e.Flips++
 		} else if s.Rng.Float64() < math.Exp(-cost*beta) {
 			e.Spin *= -1
+			e.Flips++
 		}
 	}
 }
@@ -412,6 +415,7 @@ func Model(c Cost) {
 	// divide by number of samples, and by system size to get intensive values
 
 	histogram := [5][2]float64{}
+	flips := [5]int{}
 	for tt := range nt {
 		E1 := 0.0
 		M1 := 0.0
@@ -455,6 +459,9 @@ func Model(c Cost) {
 		M[tt] = n1 * M1
 		C[tt] = (n1*E2 - n2*E1*E1) * iT2
 		X[tt] = (n1*M2 - n2*M1*M1) * iT
+		for i, e := range config.Electrons {
+			flips[i] += e.Flips
+		}
 	}
 
 	fmt.Println(E)
@@ -462,6 +469,7 @@ func Model(c Cost) {
 	for _, h := range histogram {
 		fmt.Println(h)
 	}
+	fmt.Println(flips)
 }
 
 func main() {
