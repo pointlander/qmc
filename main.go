@@ -319,9 +319,14 @@ func NewSystem(seed int64, n int) System {
 	}
 }
 
+// Link is a link between two nodes
+type Link [2]int
+
 // Link adds a link between to electrons
-func (s *System) Link(a, b int) {
-	s.Electrons[a].Links = append(s.Electrons[a].Links, s.Electrons[b])
+func (s *System) Link(links ...Link) {
+	for _, link := range links {
+		s.Electrons[link[0]].Links = append(s.Electrons[link[0]].Links, s.Electrons[link[1]])
+	}
 }
 
 // Step steps the mode
@@ -414,6 +419,22 @@ func Model(c Cost) {
 	n1, n2 := 1.0/float64(mcSteps*N*N), 1.0/float64(mcSteps*mcSteps*N*N)
 	// divide by number of samples, and by system size to get intensive values
 
+	size := 5
+	links := []Link{
+		{0, 1},
+		{0, 3},
+		{1, 0},
+		{1, 2},
+		{2, 1},
+		{2, 3},
+		{2, 4},
+		{3, 0},
+		{3, 2},
+		{3, 4},
+		{4, 2},
+		{4, 3},
+	}
+
 	histogram := [5][2]float64{}
 	flips := [5]int{}
 	for tt := range nt {
@@ -421,19 +442,8 @@ func Model(c Cost) {
 		M1 := 0.0
 		E2 := 0.0
 		M2 := 0.0
-		config := NewSystem(1, 5)
-		config.Link(0, 1)
-		config.Link(0, 3)
-		config.Link(1, 0)
-		config.Link(1, 2)
-		config.Link(2, 1)
-		config.Link(2, 3)
-		config.Link(2, 4)
-		config.Link(3, 0)
-		config.Link(3, 2)
-		config.Link(3, 4)
-		config.Link(4, 2)
-		config.Link(4, 3)
+		config := NewSystem(1, size)
+		config.Link(links...)
 
 		iT := 1.0 / T[tt]
 		iT2 := iT * iT
