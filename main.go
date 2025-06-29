@@ -434,52 +434,64 @@ func Model(c Cost) {
 		{4, 2},
 		{4, 3},
 	}
+	for range 33 {
+		histogram := make([][2]float64, size)
+		flips := make([]int, size)
+		for tt := range nt {
+			E1 := 0.0
+			M1 := 0.0
+			E2 := 0.0
+			M2 := 0.0
+			config := NewSystem(1, size)
+			config.Link(links...)
 
-	histogram := [5][2]float64{}
-	flips := [5]int{}
-	for tt := range nt {
-		E1 := 0.0
-		M1 := 0.0
-		E2 := 0.0
-		M2 := 0.0
-		config := NewSystem(1, size)
-		config.Link(links...)
+			iT := 1.0 / T[tt]
+			iT2 := iT * iT
 
-		iT := 1.0 / T[tt]
-		iT2 := iT * iT
-
-		for range eqSteps { // equilibrate
-			config.Step(iT, c) // Monte Carlo moves
-		}
-
-		for range mcSteps {
-			config.Step(iT, c)
-			Ene := config.CalcEnergy() // calculate the energy
-			Mag := config.CalcMag()    // calculate the magnetisation
-			for i, e := range config.Electrons {
-				histogram[i][S(e.Spin)]++
+			for range eqSteps { // equilibrate
+				config.Step(iT, c) // Monte Carlo moves
 			}
-			E1 = E1 + Ene
-			M1 = M1 + Mag
-			M2 = M2 + Mag*Mag
-			E2 = E2 + Ene*Ene
+
+			for range mcSteps {
+				config.Step(iT, c)
+				Ene := config.CalcEnergy() // calculate the energy
+				Mag := config.CalcMag()    // calculate the magnetisation
+				for i, e := range config.Electrons {
+					histogram[i][S(e.Spin)]++
+				}
+				E1 = E1 + Ene
+				M1 = M1 + Mag
+				M2 = M2 + Mag*Mag
+				E2 = E2 + Ene*Ene
+			}
+
+			E[tt] = n1 * E1
+			M[tt] = n1 * M1
+			C[tt] = (n1*E2 - n2*E1*E1) * iT2
+			X[tt] = (n1*M2 - n2*M1*M1) * iT
+			for i, e := range config.Electrons {
+				flips[i] += e.Flips
+			}
 		}
 
-		E[tt] = n1 * E1
-		M[tt] = n1 * M1
-		C[tt] = (n1*E2 - n2*E1*E1) * iT2
-		X[tt] = (n1*M2 - n2*M1*M1) * iT
-		for i, e := range config.Electrons {
-			flips[i] += e.Flips
+		fmt.Println(E)
+		fmt.Println(M)
+		for _, h := range histogram {
+			fmt.Println(h)
 		}
+		max, min, maxIndex, minIndex := 0, math.MaxInt64, 0, 0
+		for i, flips := range flips {
+			if flips > max {
+				max, maxIndex = flips, i
+			}
+			if flips < min {
+				min, minIndex = flips, i
+			}
+		}
+		fmt.Println(flips)
+		size++
+		links = append(links, Link{minIndex, maxIndex})
 	}
-
-	fmt.Println(E)
-	fmt.Println(M)
-	for _, h := range histogram {
-		fmt.Println(h)
-	}
-	fmt.Println(flips)
 }
 
 func main() {
