@@ -489,8 +489,11 @@ func Model(c Cost) {
 			}
 		}
 		fmt.Println(flips)
+		links = append(links, Link{minIndex, size})
+		links = append(links, Link{maxIndex, size})
+		links = append(links, Link{size, minIndex})
+		links = append(links, Link{size, maxIndex})
 		size++
-		links = append(links, Link{minIndex, maxIndex})
 	}
 }
 
