@@ -1,2 +1,5 @@
-[Quantum Monte Carlo](https://courses.physics.ucsd.edu/2016/Spring/physics142/Labs/FinalProjects/LJproject/topic5-lec5.pdf)
-[Ising model](https://rajeshrinet.github.io/blog/2014/ising-model/)
+* [Quantum Monte Carlo](https://courses.physics.ucsd.edu/2016/Spring/physics142/Labs/FinalProjects/LJproject/topic5-lec5.pdf)
+* [Ising model](https://rajeshrinet.github.io/blog/2014/ising-model/)
+* [COMPUTATIONAL PHYSICS](https://courses.physics.ucsd.edu/2016/Spring/physics142/Lectures/Lecture15/Hjorth-JensenLectures2010.pdf)
+* [Solving Traveling Salesman Problems Using Ising Models with Simulated Bifurcation](https://www.ece.ualberta.ca/~jhan8/publications/SB_TSP_ISOCC_Submitted.pdf)
+* [3SAT on an All-to-All-Connected CMOS Ising Solver Chip](https://arxiv.org/pdf/2309.11017)
